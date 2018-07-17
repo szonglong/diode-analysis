@@ -16,9 +16,9 @@ plotyrange=[10**-6,10**4]
 root = Tkinter.Tk()
 root.withdraw() #use to hide tkinter window
 
-#currdir = os.getcwd()
-#tempdir = tkFileDialog.askdirectory(parent=root, initialdir='C:\\Users\\E0004621\\Desktop\\Zong Long\\Papers', title='Please select the data folder') #select directory for data
-tempdir = 'C:\\Users\\E0004621\\Desktop\\Pythontest' #Debugging use
+currdir = os.getcwd()
+tempdir = tkFileDialog.askdirectory(parent=root, initialdir='C:\\Users\\E0004621\\Desktop\\Zong Long\\Papers', title='Please select the data folder') #select directory for data
+#tempdir = 'C:\\Users\\E0004621\\Desktop\\Pythontest' #Debugging use
 os.chdir(tempdir)
 
 filelist = os.listdir(os.getcwd())  # working dir
@@ -37,7 +37,8 @@ print wlist    #is shown on command prompt dialogue
 ############ Processing data ############
 for file in wlist:
     wb=pd.read_excel(r'%s.xls' %file, None)
-    ana_array = pd.DataFrame(index=['Pmax','Vmpp','Jmpp'])
+    ana_array = pd.DataFrame(index=['Pmax','Vmpp','Jmpp','Jsc','Voc'])
+    quarter_length = 0
     for sheet_index in range(0,1) + range(3,len(wb.keys())):  
         sh=wb.values()[sheet_index]
         
@@ -47,11 +48,19 @@ for file in wlist:
             dat2 *=1e3/0.0429
             final_array = dat1.join(np.abs(dat2))
 
+            for voc_index in range(len(dat2['j1'])):
+                if dat2['j1'][voc_index] < 0:
+#                    print voc_index
+                    voc = (dat1['Vs'][voc_index-1]*dat2['j1'][voc_index]-dat1['Vs'][voc_index]*dat2['j1'][voc_index-1])/(dat2['j1'][voc_index]-dat2['j1'][voc_index-1])
+                    break
+
             power_array = dat1
             power_array['p1']=dat1.Vs*dat2.j1
-            power_array2 = power_array[power_array.Vs >0]
-            index=power_array2['p1'].idxmax()
-            ana_array['p1'] = [power_array2['p1'][index],dat1.Vs[index],dat2.j1[index]]
+            quarter_length=len(power_array)/4
+            power_array2= power_array.truncate(after=quarter_length)
+
+            max_index=power_array2['p1'].idxmax()
+            ana_array['p1'] = [power_array2['p1'][max_index],dat1.Vs[max_index],dat2.j1[max_index],dat2.j1[0],voc]
             
             
         else:
@@ -59,10 +68,17 @@ for file in wlist:
             dat2 *=1e3/0.0429
             final_array=final_array.join(np.abs(dat2))
             
+            for voc_index in range(len(dat2['j%i' % (sheet_index-1)])):
+                if dat2['j%i' % (sheet_index-1)][voc_index] < 0:
+#                    print voc_index
+                    voc = (dat1['Vs'][voc_index-1]*dat2['j%i' % (sheet_index-1)][voc_index]-dat1['Vs'][voc_index]*dat2['j%i' % (sheet_index-1)][voc_index-1])/(dat2['j%i' % (sheet_index-1)][voc_index]-dat2['j%i' % (sheet_index-1)][voc_index-1])
+                    break
+            
+            
             power_array['p%i' % (sheet_index-1)]=dat1.Vs*dat2['j%i' % (sheet_index-1)]
-            power_array2 = power_array[power_array.Vs >0]
-            index=power_array2['p%i' % (sheet_index-1)].idxmax()
-            ana_array['p%i' % (sheet_index-1)] = [power_array2['p%i' % (sheet_index-1)][index],dat1.Vs[index],dat2['j%i' % (sheet_index-1)][index]]
+            power_array2 = power_array.truncate(after=quarter_length)
+            max_index=power_array2['p%i' % (sheet_index-1)].idxmax()
+            ana_array['p%i' % (sheet_index-1)] = [power_array2['p%i' % (sheet_index-1)][max_index],dat1.Vs[max_index],dat2['j%i' % (sheet_index-1)][max_index],dat2['j%i' % (sheet_index-1)][0],voc]
 
     #Final array has columns Vs and J1~J8
 
