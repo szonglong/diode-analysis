@@ -41,25 +41,53 @@ print wlist    #is shown on command prompt dialogue
 
 ############ Processing data ############
 def ana_var(sheet_name):
+    quadrant_counter = 2
+
+    power_array[sheet_name[0]]=dat1.Vs*dat2[sheet_name[1]]*area
+    power_array2 = power_array.truncate(after=quarter_length); power_array3 = power_array.truncate(before=quarter_length+1, after=2*quarter_length)
+    max_index2=power_array2[sheet_name[0]].idxmax(); max_index3=power_array3[sheet_name[0]].idxmax()
+    
+    try:
+        Pmax2 = power_array2[sheet_name[0]][max_index2]
+        Pmax3 = power_array3[sheet_name[0]][max_index3]
+        if Pmax2 < Pmax3:
+            Pmax = Pmax3
+            max_index = max_index3
+            quadrant_counter = 3
+            print (Pmax3-Pmax2)/Pmax3
+        else:
+            Pmax = Pmax2
+            max_index = max_index2
+        
+    except TypeError:
+        Pmax = Pmax2
+        max_index = max_index2
+
     for voc_index in range(len(dat2[sheet_name[1]])):
         Voc=-1 #invalid pixel: check d or pixel is shorted
         Rs=9e9   
-        if dat2[sheet_name[1]][voc_index] < 0:
-            if voc_index == 0:
-                break
-            else:
+        if quadrant_counter == 2:
+            if dat2[sheet_name[1]][voc_index] < 0:
+                if voc_index == 0:
+                    break
+                else:
+                    Voc = (dat1['Vs'][voc_index-1]*dat2[sheet_name[1]][voc_index]-dat1['Vs'][voc_index]*dat2[sheet_name[1]][voc_index-1])/(dat2[sheet_name[1]][voc_index]-dat2[sheet_name[1]][voc_index-1])
+                    Rs = abs((dat1['Vs'][voc_index]-dat1['Vs'][voc_index-1])/(dat2[sheet_name[1]][voc_index]-dat2[sheet_name[1]][voc_index-1]))*area
+                    break
+        else:
+            voc_index += quarter_length
+            if dat2[sheet_name[1]][voc_index] > 0:
+
                 Voc = (dat1['Vs'][voc_index-1]*dat2[sheet_name[1]][voc_index]-dat1['Vs'][voc_index]*dat2[sheet_name[1]][voc_index-1])/(dat2[sheet_name[1]][voc_index]-dat2[sheet_name[1]][voc_index-1])
-                Rs = abs((dat1['Vs'][voc_index]-dat1['Vs'][voc_index-1])/(dat2[sheet_name[1]][voc_index]-dat2[sheet_name[1]][voc_index-1]))
+                Rs = abs((dat1['Vs'][voc_index]-dat1['Vs'][voc_index-1])/(dat2[sheet_name[1]][voc_index]-dat2[sheet_name[1]][voc_index-1]))*area
                 break
 
-    power_array[sheet_name[0]]=dat1.Vs*dat2[sheet_name[1]]*42.9e-6
-    power_array2 = power_array.truncate(after=quarter_length)
-    max_index=power_array2[sheet_name[0]].idxmax()
-    
-    Pmax = power_array2[sheet_name[0]][max_index]
     Vmpp = dat1.Vs[max_index]
     Jmpp = dat2[sheet_name[1]][max_index]
-    Jsc = dat2[sheet_name[1]][0]
+    try:
+        Jsc = dat2[sheet_name[1]][0] if quadrant_counter == 2 else dat2[sheet_name[1]][quarter_length*2]
+    except KeyError:
+        Jsc = dat2[sheet_name[1]][0]
     PCE = Pmax/(1000*area/m)*100
     FF = Jmpp*Vmpp/(Jsc*Voc)*100
 
@@ -79,7 +107,7 @@ for file in wlist:
             final_array = dat1.join(np.abs(dat2))
 
             power_array = dat1
-            quarter_length=len(power_array)/4
+            quarter_length=int(len(power_array)/4)
             
         else:
             sheet_name = ['p%i' % (sheet_index-1),'j%i' % (sheet_index-1)]            
