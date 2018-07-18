@@ -12,13 +12,14 @@ vcol=1 #column to take voltage. Usually @ column
 plotxrange=[-3,3]
 plotyrange=[10**-6,10**4]
 
+m = 1 #mismatch factor
 ############ File Search ############
 root = Tkinter.Tk()
 root.withdraw() #use to hide tkinter window
 
-currdir = os.getcwd()
-tempdir = tkFileDialog.askdirectory(parent=root, initialdir='C:\\Users\\E0004621\\Desktop\\Zong Long\\Papers', title='Please select the data folder') #select directory for data
-#tempdir = 'C:\\Users\\E0004621\\Desktop\\Pythontest' #Debugging use
+#currdir = os.getcwd()
+#tempdir = tkFileDialog.askdirectory(parent=root, initialdir='C:\\Users\\E0004621\\Desktop\\Zong Long\\Papers', title='Please select the data folder') #select directory for data
+tempdir = 'C:\\Users\\E0004621\\Desktop\\Pythontest' #Debugging use
 os.chdir(tempdir)
 
 filelist = os.listdir(os.getcwd())  # working dir
@@ -37,7 +38,7 @@ print wlist    #is shown on command prompt dialogue
 ############ Processing data ############
 for file in wlist:
     wb=pd.read_excel(r'%s.xls' %file, None)
-    ana_array = pd.DataFrame(index=['Pmax','Vmpp','Jmpp','Jsc','Voc'])
+    ana_array = pd.DataFrame(index=['Pmax','Vmpp','Jmpp','Jsc','Voc','Rs','PCE','FF'])
     quarter_length = 0
     for sheet_index in range(0,1) + range(3,len(wb.keys())):  
         sh=wb.values()[sheet_index]
@@ -50,8 +51,8 @@ for file in wlist:
 
             for voc_index in range(len(dat2['j1'])):
                 if dat2['j1'][voc_index] < 0:
-#                    print voc_index
-                    voc = (dat1['Vs'][voc_index-1]*dat2['j1'][voc_index]-dat1['Vs'][voc_index]*dat2['j1'][voc_index-1])/(dat2['j1'][voc_index]-dat2['j1'][voc_index-1])
+                    Voc = (dat1['Vs'][voc_index-1]*dat2['j1'][voc_index]-dat1['Vs'][voc_index]*dat2['j1'][voc_index-1])/(dat2['j1'][voc_index]-dat2['j1'][voc_index-1])
+                    Rs = abs((dat1['Vs'][voc_index]-dat1['Vs'][voc_index-1])/(dat2['j1'][voc_index]-dat2['j1'][voc_index-1]))
                     break
 
             power_array = dat1
@@ -60,7 +61,14 @@ for file in wlist:
             power_array2= power_array.truncate(after=quarter_length)
 
             max_index=power_array2['p1'].idxmax()
-            ana_array['p1'] = [power_array2['p1'][max_index],dat1.Vs[max_index],dat2.j1[max_index],dat2.j1[0],voc]
+            Pmax = power_array2['p1'][max_index]
+            Vmpp = dat1.Vs[max_index]
+            Impp = dat2.j1[max_index]
+            Isc = dat2.j1[0]
+            PCE = power_array2['p1'][max_index]/(1000*0.0429/m)
+            FF = Pmax/(Isc*Voc)
+            
+            ana_array['p1'] = [Pmax,Vmpp,Impp,Isc,Voc,Rs,PCE,FF]
             
             
         else:
@@ -70,20 +78,25 @@ for file in wlist:
             
             for voc_index in range(len(dat2['j%i' % (sheet_index-1)])):
                 if dat2['j%i' % (sheet_index-1)][voc_index] < 0:
-#                    print voc_index
-                    voc = (dat1['Vs'][voc_index-1]*dat2['j%i' % (sheet_index-1)][voc_index]-dat1['Vs'][voc_index]*dat2['j%i' % (sheet_index-1)][voc_index-1])/(dat2['j%i' % (sheet_index-1)][voc_index]-dat2['j%i' % (sheet_index-1)][voc_index-1])
+                    Voc = (dat1['Vs'][voc_index-1]*dat2['j%i' % (sheet_index-1)][voc_index]-dat1['Vs'][voc_index]*dat2['j%i' % (sheet_index-1)][voc_index-1])/(dat2['j%i' % (sheet_index-1)][voc_index]-dat2['j%i' % (sheet_index-1)][voc_index-1])
+                    Rs = abs((dat1['Vs'][voc_index]-dat1['Vs'][voc_index-1])/(dat2['j%i' % (sheet_index-1)][voc_index]-dat2['j%i' % (sheet_index-1)][voc_index-1]))
                     break
             
             
             power_array['p%i' % (sheet_index-1)]=dat1.Vs*dat2['j%i' % (sheet_index-1)]
             power_array2 = power_array.truncate(after=quarter_length)
+            
             max_index=power_array2['p%i' % (sheet_index-1)].idxmax()
-            ana_array['p%i' % (sheet_index-1)] = [power_array2['p%i' % (sheet_index-1)][max_index],dat1.Vs[max_index],dat2['j%i' % (sheet_index-1)][max_index],dat2['j%i' % (sheet_index-1)][0],voc]
+            Pmax = power_array2['p%i' % (sheet_index-1)][max_index]
+            Vmpp = dat1.Vs[max_index]
+            Impp = dat2['j%i' % (sheet_index-1)][max_index]
+            Isc = dat2['j%i' % (sheet_index-1)][0]
+            PCE = power_array2['p%i' % (sheet_index-1)][max_index]/(1000*0.0429/m)
+            FF = Pmax/(Isc*Voc)
+
+            ana_array['p%i' % (sheet_index-1)] = [Pmax,Vmpp,Impp,Isc,Voc,Rs,PCE,FF]
 
     #Final array has columns Vs and J1~J8
-
-    
-
     final_array.plot(x="Vs", figsize=(6,6), logy=True) #Semi-log plot
 
 
@@ -100,8 +113,6 @@ for file in wlist:
 
 
 ############ Export ############
-#    final_array.to_excel('processed_semilog/%s _p.xls' %file)
-    
     writer = pd.ExcelWriter('processed_semilog/%s _p.xlsx' %file, engine='xlsxwriter')
     final_array.to_excel(writer, sheet_name = 'Final array')
     ana_array.to_excel(writer, sheet_name = 'Analysis array')
