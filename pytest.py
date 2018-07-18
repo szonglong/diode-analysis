@@ -20,10 +20,10 @@ area=42.9e-6
 root = Tkinter.Tk()
 root.withdraw() #use to hide tkinter window
 
-#currdir = os.getcwd()
-#tempdir = tkFileDialog.askdirectory(parent=root, initialdir='C:\\Users\\E0004621\\Desktop\\Zong Long\\Papers', title='Please select the data folder') #select directory for data
+currdir = os.getcwd()
+tempdir = tkFileDialog.askdirectory(parent=root, initialdir='C:\\Users\\E0004621\\Desktop\\Zong Long\\Papers', title='Please select the data folder') #select directory for data
 #tempdir = 'C:\\Users\\E0004621\\Desktop\\Pythontest' #Debugging use
-tempdir = 'C:\\Users\\E0004621\\Desktop\\Zong Long\\Papers\\Data\\180711' #Debugging use
+#tempdir = 'C:\\Users\\E0004621\\Desktop\\Zong Long\\Papers\\Data\\180711' #Debugging use
 os.chdir(tempdir)
 
 filelist = os.listdir(os.getcwd())  # working dir
@@ -40,7 +40,7 @@ for i in xrange(len(filelist)):
 print wlist    #is shown on command prompt dialogue
 
 ############ Processing data ############
-def ana_var(sheet_name):
+def ana_var(sheet_name):                #analyse variable for 
     quadrant_counter = 2
 
     power_array[sheet_name[0]]=dat1.Vs*dat2[sheet_name[1]]*area
@@ -54,7 +54,6 @@ def ana_var(sheet_name):
             Pmax = Pmax3
             max_index = max_index3
             quadrant_counter = 3
-            print (Pmax3-Pmax2)/Pmax3
         else:
             Pmax = Pmax2
             max_index = max_index2
