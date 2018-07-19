@@ -15,13 +15,13 @@ plotyrange=[10**-6,10**4]
 m = 1 #mismatch factor; def = 1
 d = 1 #direction of connectors' def = 1, acceptable args = +-1
 
-area=42.9e-6
+area=4.29e-6
 ############ File Search ############
 root = Tkinter.Tk()
 root.withdraw() #use to hide tkinter window
 
 currdir = os.getcwd()
-tempdir = tkFileDialog.askdirectory(parent=root, initialdir='C:\\Users\\E0004621\\Desktop\\Zong Long\\Papers', title='Please select the data folder') #select directory for data
+tempdir = tkFileDialog.askdirectory(parent=root, initialdir='C:\\Users\\E0004621\\Desktop\\Zong Long\\Papers\\Data', title='Please select the data folder') #select directory for data
 #tempdir = 'C:\\Users\\E0004621\\Desktop\\Pythontest' #Debugging use
 #tempdir = 'C:\\Users\\E0004621\\Desktop\\Zong Long\\Papers\\Data\\180711' #Debugging use
 os.chdir(tempdir)
