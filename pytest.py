@@ -6,9 +6,6 @@ import Tkinter
 import tkFileDialog
 
 ############ Settings ##############
-jcol=2 #Column to take current. First column is 0
-vcol=1 #column to take voltage. Usually @ column 
-
 plotxrange=[-3,3]
 plotyrange=[10**-6,10**4]
 
@@ -40,10 +37,10 @@ for i in xrange(len(filelist)):
 print wlist    #is shown on command prompt dialogue
 
 ############ Processing data ############
-def ana_var(sheet_name):                #analyse variable for 
+def ana_var(sheet_name):                #analyse variable  
     quadrant_counter = 2
-
-    power_array[sheet_name[0]]=dat1.Vs*dat2[sheet_name[1]]*area
+    
+    power_array[sheet_name[0]]=dat1.Vs*dat2[sheet_name[1]]*(10*area)
     power_array2 = power_array.truncate(after=quarter_length); power_array3 = power_array.truncate(before=quarter_length+1, after=2*quarter_length)
     max_index2=power_array2[sheet_name[0]].idxmax(); max_index3=power_array3[sheet_name[0]].idxmax()
     
@@ -71,16 +68,17 @@ def ana_var(sheet_name):                #analyse variable for
                     break
                 else:
                     Voc = (dat1['Vs'][voc_index-1]*dat2[sheet_name[1]][voc_index]-dat1['Vs'][voc_index]*dat2[sheet_name[1]][voc_index-1])/(dat2[sheet_name[1]][voc_index]-dat2[sheet_name[1]][voc_index-1])
-                    Rs = abs((dat1['Vs'][voc_index]-dat1['Vs'][voc_index-1])/(dat2[sheet_name[1]][voc_index]-dat2[sheet_name[1]][voc_index-1]))*area
+                    Rs = abs((dat1['Vs'][voc_index]-dat1['Vs'][voc_index-1])/(dat2[sheet_name[1]][voc_index]-dat2[sheet_name[1]][voc_index-1]))*(10*area)
                     break
         else:
             voc_index += quarter_length
             if dat2[sheet_name[1]][voc_index] > 0:
 
                 Voc = (dat1['Vs'][voc_index-1]*dat2[sheet_name[1]][voc_index]-dat1['Vs'][voc_index]*dat2[sheet_name[1]][voc_index-1])/(dat2[sheet_name[1]][voc_index]-dat2[sheet_name[1]][voc_index-1])
-                Rs = abs((dat1['Vs'][voc_index]-dat1['Vs'][voc_index-1])/(dat2[sheet_name[1]][voc_index]-dat2[sheet_name[1]][voc_index-1]))*area
+                Rs = abs((dat1['Vs'][voc_index]-dat1['Vs'][voc_index-1])/(dat2[sheet_name[1]][voc_index]-dat2[sheet_name[1]][voc_index-1]))*(10*area)
                 break
-
+            
+    Iinj = dat2[sheet_name[1]][quarter_length]*(10*area)*-1000 if len(dat2[sheet_name[1]])>quarter_length else None
     Vmpp = dat1.Vs[max_index]
     Jmpp = dat2[sheet_name[1]][max_index]
     try:
@@ -90,11 +88,11 @@ def ana_var(sheet_name):                #analyse variable for
     PCE = Pmax/(1000*area/m)*100
     FF = Jmpp*Vmpp/(Jsc*Voc)*100
 
-    ana_array[sheet_name[0]] = [Jsc,Voc,Pmax,Vmpp,Jmpp,Rs,PCE,FF]
+    ana_array[sheet_name[0]] = [Jsc,Voc,Iinj,Pmax,Vmpp,Jmpp,Rs,PCE,FF]
     
 for file in wlist:
     wb=pd.read_excel(r'%s.xls' %file, None)
-    ana_array = pd.DataFrame(index=['Jsc','Voc','Pmax','Vmpp','Jmpp','Rs','PCE','FF'])
+    ana_array = pd.DataFrame(index=['Jsc (mA/cm2)','Voc (V)','I_inj (mA)','Pmax (W)','Vmpp (V)','Jmpp (mA/cm2)','Rs','PCE (%)','FF (%)'])
     
     for sheet_index in range(0,1) + range(3,len(wb.keys())):  
         sh=wb.values()[sheet_index]
@@ -102,7 +100,7 @@ for file in wlist:
         if sheet_index == 0:
             sheet_name = ['p1','j1']            
             dat1=pd.DataFrame({'Vs': sh.Vs})
-            dat2=pd.DataFrame({'j1': sh.Id/area*d})
+            dat2=pd.DataFrame({'j1': sh.Id/(10*area)*d}) #current density in mA/cm2
             final_array = dat1.join(np.abs(dat2))
 
             power_array = dat1
@@ -110,7 +108,7 @@ for file in wlist:
             
         else:
             sheet_name = ['p%i' % (sheet_index-1),'j%i' % (sheet_index-1)]            
-            dat2=pd.DataFrame({'j%i' % (sheet_index-1) : sh.Id/area*d})
+            dat2=pd.DataFrame({'j%i' % (sheet_index-1) : sh.Id/(10*area)*d})
             final_array=final_array.join(np.abs(dat2))
 
         if 'b' in str(file):
