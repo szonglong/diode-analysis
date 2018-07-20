@@ -6,12 +6,10 @@ import Tkinter
 import tkFileDialog
 
 ############ Settings ##############
-plotxrange=[-1.2,1]
-plotyrange=[-3,4]
-
-d = -1 #to look into
+list_tol = 5
 
 area=4.29e-6
+
 ############ File Search ############
 root = Tkinter.Tk()
 root.withdraw() #use to hide tkinter window
@@ -41,9 +39,9 @@ def ana_var(sheet_name):                #analyse variable
     tol = 1e-1
     while len(dev_list)==0:
         for dev_index in range(1,len(dat2[sheet_name[1]])-4):
-            dev = (dat2[sheet_name[1]][dev_index+1]-dat2[sheet_name[1]][dev_index-1])/(dat1['log V1'][dev_index+1]-dat1['log V1'][dev_index-1])
+            dev = (dat2[sheet_name[1]][dev_index+1]-dat2[sheet_name[1]][dev_index-1])/(np.log10(np.abs(dat1['V1'][dev_index+1]))-(np.log10(np.abs(dat1['V1'][dev_index-1]))))
             if np.abs(2-dev)  < tol:
-                dev_list[10**dat1['log V1'][dev_index]]=[dev]
+                dev_list[dat1['V1'][dev_index]]=[dev]
         tol*= 2
     for i in dev_list:
         if i in big_dict:
@@ -51,35 +49,42 @@ def ana_var(sheet_name):                #analyse variable
             
         else:
             big_dict[i] =  dev_list[i]
-            print sheet_name
 
             
 for file in wlist:
     wb=pd.read_excel(r'%s.xls' %file, None)
     big_dict = {}
+    to_plot = []
     for sheet_index in range(0,1) + range(3,len(wb.keys())):  
         sh=wb.values()[sheet_index]
         
         if sheet_index == 0:
-            sheet_name = ['log V1','log j1']            
-            dat1=pd.DataFrame({'log V1': np.log10(np.abs(sh.V1))})
+            sheet_name = ['V1','log j1']            
+            dat1=pd.DataFrame({'V1': sh.V1})
             dat2=pd.DataFrame({'log j1': np.log10(np.abs(sh.I1/(10*area)))}) #current density in mA/cm2
-            final_array = dat1.join(dat2)
+            semilog_array = dat1.join(dat2)
 
             
         else:
-            sheet_name = ['log V%i' % (sheet_index-1),'log j%i' % (sheet_index-1)]            
+            sheet_name = ['V%i' % (sheet_index-1),'log j%i' % (sheet_index-1)]            
             dat2=pd.DataFrame({'log j%i' % (sheet_index-1) : np.log10(np.abs(sh.I1/(10*area)))})
-            final_array=final_array.join(dat2)
+            semilog_array=semilog_array.join(dat2)
     
         ana_var(sheet_name)
-
+    for key in big_dict:
+        if len(big_dict[key])>=list_tol:
+            to_plot.append(key)
+    plt.figure(1)
+    semilog_array.plot(x="V1", figsize=(9,9))
+    plt.savefig('processed_semilog/%s _p.png' %file)
+#    plt.xlim([min(to_plot),max(to_plot)])
+    plt.show()
 ############ Plotting settings ############
 
 
 ############ Export ############
     writer = pd.ExcelWriter('processed_semilog/%s _p.xlsx' %file, engine='xlsxwriter')
-    final_array.to_excel(writer, sheet_name = 'Final array')
+    semilog_array.to_excel(writer, sheet_name = 'Final array')
     writer.save()
     
     plt.savefig('processed_semilog/%s _p.png' %file)
