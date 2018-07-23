@@ -40,7 +40,7 @@ def ana_var(sheet_name):                #analyse variable
     while len(dev_list)==0:
         for dev_index in range(1,len(dat2[sheet_name[1]])-4):
             dev = (dat2[sheet_name[1]][dev_index+1]-dat2[sheet_name[1]][dev_index-1])/(np.log10(np.abs(dat1['V1'][dev_index+1]))-(np.log10(np.abs(dat1['V1'][dev_index-1]))))
-            if np.abs(2-dev)  < tol:
+            if np.abs(2-dev)  < tol and dat1['V1'][dev_index] > 0: #note: this version takes the positive sweep only
                 dev_list[dat1['V1'][dev_index]]=[dev]
         tol*= 2
     for i in dev_list:
@@ -50,6 +50,16 @@ def ana_var(sheet_name):                #analyse variable
         else:
             big_dict[i] =  dev_list[i]
 
+
+def ana_sclc():
+    plt.figure(2)
+    log_array = semilog_array
+    log_array.drop(labels='V1', axis='columns', inplace=True)
+    log_array['log V1'] = np.log10(np.abs(dat1))
+    plog_array = log_array.truncate(before=1, after=len(log_array)/2)
+    plog_array.plot(x='log V1', figsize=(9,9))
+    plt.xlim(np.log10(min(np.abs(to_plot))),np.log10(max(np.abs(to_plot))))
+    plt.show()
             
 for file in wlist:
     wb=pd.read_excel(r'%s.xls' %file, None)
@@ -61,7 +71,7 @@ for file in wlist:
         if sheet_index == 0:
             sheet_name = ['V1','log j1']            
             dat1=pd.DataFrame({'V1': sh.V1})
-            dat2=pd.DataFrame({'log j1': np.log10(np.abs(sh.I1/(10*area)))}) #current density in mA/cm2
+            dat2=pd.DataFrame({'log j1': np.log10(np.abs(sh.I1/(10*area)))}) #log current density in mA/cm2
             semilog_array = dat1.join(dat2)
 
             
@@ -74,18 +84,40 @@ for file in wlist:
     for key in big_dict:
         if len(big_dict[key])>=list_tol:
             to_plot.append(key)
+
+############ Basic export ############
     plt.figure(1)
-    semilog_array.plot(x="V1", figsize=(9,9))
+    semilog_array.plot(x='V1', figsize=(9,9))
+    plt.title('%s'%(file))
+    plt.grid(True)
+    plt.xlabel('Applied voltage(V)')
+    plt.ylabel('Log [Current density](mAcm$^-$$^2$)')
+    plt.xlim(-8,8)
+    plt.ylim(-3,4)
+    font={'size':18}
+    plt.rc('font',**font)
+    plt.legend(loc='lower left', prop={'size':12})    
     plt.savefig('processed_semilog/%s _p.png' %file)
-#    plt.xlim([min(to_plot),max(to_plot)])
-    plt.show()
-############ Plotting settings ############
 
-
-############ Export ############
     writer = pd.ExcelWriter('processed_semilog/%s _p.xlsx' %file, engine='xlsxwriter')
     semilog_array.to_excel(writer, sheet_name = 'Final array')
-    writer.save()
+############ Plotting settings ############
+    to_plot.sort()
+    print 'The range of SCLC is : ' + str(to_plot)
+    ana_sclc()
+#    cont_counter = raw_input('Continue to analyse data? (y/n)')
+#    if cont_counter == 'y':
+#        log_array = ana_sclc()
+#        #run program
+#    elif cont_counter == 'n':
+#        print 'no'
+#    else:
+#        print 'poop'
     
-    plt.savefig('processed_semilog/%s _p.png' %file)
+
+############ Export ############
+
+    
+    
+    writer.save()
     plt.close()
