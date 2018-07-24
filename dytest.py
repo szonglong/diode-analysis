@@ -3,14 +3,16 @@ import os
 import numpy as np
 import matplotlib.pyplot as plt
 import Tkinter
-import tkFileDialog
+from bisect import bisect
+#import tkFileDialog
 
 ############ Settings ##############
-list_tol_ref = 5
-tol_ref = 1e-1
-area=4.29e-6
-thickness = 100e-7
-epsilon = 3*8.85e-12
+list_tol_ref = 5 #number of pixels required under SCLC
+tol_ref = 1e-1 #how close the derivative of the log/log is to 2
+area=4.29e-6 # in m2 I think
+thickness = 98.5*1e-7  #in cm
+epsilon = 3*8.85e-12 #n * e0
+Vbi = 0.1 #default=0.1
 
 ############ File Search ############
 root = Tkinter.Tk()
@@ -47,7 +49,7 @@ def ana_var(sheet_name,dev_df):              #updates the 2 dictionaries with us
         dev_list.append(dev)
         charlie_list.append(dat2[sheet_name[1]][dev_index]-dev*np.log10(np.abs(dat1['V1'][dev_index])))
     
-    working_dict=tuple(zip(dat1['V1'][1:len(dat2[sheet_name[1]])-4],zip(dev_list,charlie_list,[sheet_name[1]]*len(dev_list))))  #make woeking dict
+    working_dict=tuple(zip(semilog_array['V1'][1:len(dat2[sheet_name[1]])-4],zip(dev_list,charlie_list,[sheet_name[1]]*len(dev_list))))  #make woeking dict
     dev_df['Derivative %s /  log %s' % (sheet_name[1],sheet_name[0])] = dev_list
 
     while working_list == []:
@@ -56,7 +58,7 @@ def ana_var(sheet_name,dev_df):              #updates the 2 dictionaries with us
 
     for (k,v) in working_dict: #is not actually a dictionary but a tuple of size 2 with "key" and "value"
         if v[0] in working_list:
-            if k>= 0:
+            if k>= -Vbi:
                 if k in big_dict:
                     big_dict[k].append(v)
                 else:
@@ -66,20 +68,21 @@ def ana_var(sheet_name,dev_df):              #updates the 2 dictionaries with us
                     big_dict2[k].append(v)
                 else:
                     big_dict2[k] = [v]
+    return semilog_array['V1']
 
 def sclc_plot(to_plot,name): #plots the forward and backward sweeps and returns the ranges
     fig=plt.figure(1)
-    log_array = semilog_array.copy()
-    log_array.drop(labels='V1', axis='columns', inplace=True)
-    log_array['log V1'] = np.log10(np.abs(dat1))
-    min_to_plot= list(semilog_array['V1']).index(min(np.abs(to_plot)))
-    max_to_plot=list(semilog_array['V1']).index(max(np.abs(to_plot)))
-    plog_array = log_array.truncate(before=min_to_plot, after=max_to_plot)
-    
-    plog_array.plot(x='log V1', figsize=(9,9))
-    plt.savefig('processed_semilog/ _%s.png' %(file+name))
+    plog_array = semilog_array.copy()
+    plog_array.drop(labels='V1', axis='columns', inplace=True)
+    plog_array['V1'] = (np.abs(dat1))
+    plog_array.plot(x='V1', figsize=(9,9),logx=True)
+    plt.xlim(np.log10(abs(min(to_plot))),np.log10(abs(max(to_plot))))
+    plt.ylim(-3,2)
+    plt.xlabel('log (V-Vbi)')
+    plt.title('%s'%(file+name))
+    plt.savefig('processed_semilog/ plotted_log_%s.png' %(file+name))
     plt.close(fig)
-    return 10**plog_array['log V1'][min_to_plot],10**plog_array['log V1'][max_to_plot]
+
 
 def process_sclc(big_dict,name): #calls sclc_plot and returns useful data in pd.df
     c_list = []
@@ -93,9 +96,10 @@ def process_sclc(big_dict,name): #calls sclc_plot and returns useful data in pd.
                     c_list.append(i[1])
         list_tol -= 1        
     alpha = 10**np.average(c_list)
-    (min_to_plot,max_to_plot) = sclc_plot(to_plot,name)
-    to_plot=map(lambda  x: np.round(x,2),to_plot)
-    d = {'SCLC minimum voltage (V)':min_to_plot, 'SCLC maximum voltage (V)':max_to_plot, 'Charge mobility (cm2/V s)':alpha*(8*thickness**3)/(1000*9*epsilon),'Number of pixels under SCLC': list_tol +1,'Data points plotted':[to_plot]}
+    sclc_plot(to_plot,name)
+    to_plot=list(map(lambda  x: np.round(x,2),to_plot))
+    to_plot.sort()
+    d = {'Charge mobility (cm2/V s)':alpha*(8*thickness**3)/(1000*9*epsilon),'Number of pixels under SCLC': list_tol +1,'Data points plotted':[to_plot]}
     return d
             
 for file in wlist:
@@ -108,7 +112,7 @@ for file in wlist:
         
         if sheet_index == 0:
             sheet_name = ['V1','log j1']            
-            dat1=pd.DataFrame({'V1': sh.V1})
+            dat1=pd.DataFrame({'V1': sh.V1-Vbi})
             dat2=pd.DataFrame({'log j1': np.log10(np.abs(sh.I1/(10*area)))}) #log current density in mA/cm2
             dev_df= pd.DataFrame({'V1':dat1['V1'][1:len(dat2['log j1'])-2]})
             semilog_array = dat1.join(dat2)
@@ -118,7 +122,7 @@ for file in wlist:
             sheet_name = ['V%i' % (sheet_index-1),'log j%i' % (sheet_index-1)]            
             dat2=pd.DataFrame({'log j%i' % (sheet_index-1) : np.log10(np.abs(sh.I1/(10*area)))})
             semilog_array=semilog_array.join(dat2)
-        ana_var(sheet_name,dev_df)
+        working_list=ana_var(sheet_name,dev_df)
     
     ana1=pd.DataFrame(process_sclc(big_dict,"f"),index=['Forward'])
     ana2=pd.DataFrame(process_sclc(big_dict2,"b"),index=['Backward'])
