@@ -68,14 +68,14 @@ def ana_var(sheet_name):                #analyse variable
                     break
                 else:
                     Voc = (dat1['Vs'][voc_index-1]*dat2[sheet_name[1]][voc_index]-dat1['Vs'][voc_index]*dat2[sheet_name[1]][voc_index-1])/(dat2[sheet_name[1]][voc_index]-dat2[sheet_name[1]][voc_index-1])
-                    Rs = abs((dat1['Vs'][voc_index]-dat1['Vs'][voc_index-1])/(dat2[sheet_name[1]][voc_index]-dat2[sheet_name[1]][voc_index-1]))*(10*area)
+                    Rs = abs((dat1['Vs'][voc_index]-dat1['Vs'][voc_index-1])/(dat2[sheet_name[1]][voc_index]-dat2[sheet_name[1]][voc_index-1]))*1000 #Ohm cm2
                     break
         else:
             voc_index += quarter_length
             if dat2[sheet_name[1]][voc_index] > 0:
 
                 Voc = (dat1['Vs'][voc_index-1]*dat2[sheet_name[1]][voc_index]-dat1['Vs'][voc_index]*dat2[sheet_name[1]][voc_index-1])/(dat2[sheet_name[1]][voc_index]-dat2[sheet_name[1]][voc_index-1])
-                Rs = abs((dat1['Vs'][voc_index]-dat1['Vs'][voc_index-1])/(dat2[sheet_name[1]][voc_index]-dat2[sheet_name[1]][voc_index-1]))*(10*area)
+                Rs = abs((dat1['Vs'][voc_index]-dat1['Vs'][voc_index-1])/(dat2[sheet_name[1]][voc_index]-dat2[sheet_name[1]][voc_index-1]))*1000
                 break
             
     Iinj = dat2[sheet_name[1]][quarter_length]*(10*area)*-1000 if len(dat2[sheet_name[1]])>quarter_length else None
@@ -92,7 +92,7 @@ def ana_var(sheet_name):                #analyse variable
     
 for file in wlist:
     wb=pd.read_excel(r'%s.xls' %file, None)
-    ana_array = pd.DataFrame(index=['Jsc (mA/cm2)','Voc (V)','I_inj (mA)','Pmax (W)','Vmpp (V)','Jmpp (mA/cm2)','Rs','PCE (%)','FF (%)'])
+    ana_array = pd.DataFrame(index=['Jsc (mA/cm2)','Voc (V)','I_inj (mA)','Pmax (W)','Vmpp (V)','Jmpp (mA/cm2)','Rs (Ohm cm2)','PCE (%)','FF (%)'])
     
     for sheet_index in range(0,1) + range(3,len(wb.keys())):  
         sh=wb.values()[sheet_index]
