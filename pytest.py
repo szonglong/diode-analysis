@@ -101,7 +101,7 @@ for file in wlist:
             sheet_name = ['p1','j1']            
             dat1=pd.DataFrame({'Vs': sh.Vs})
             dat2=pd.DataFrame({'j1': sh.Id/(10*area)*d}) #current density in mA/cm2
-            final_array = dat1.join(np.abs(dat2))
+            final_array = dat1.join(dat2)
 
             power_array = dat1
             quarter_length=int(len(power_array)/4)
@@ -109,7 +109,7 @@ for file in wlist:
         else:
             sheet_name = ['p%i' % (sheet_index-1),'j%i' % (sheet_index-1)]            
             dat2=pd.DataFrame({'j%i' % (sheet_index-1) : sh.Id/(10*area)*d})
-            final_array=final_array.join(np.abs(dat2))
+            final_array=final_array.join(dat2)
 
         if 'b' in str(file):
             ana_var(sheet_name)
