@@ -3,11 +3,11 @@ import os
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy.signal import savgol_filter
-#import Tkinter
-#import tkFileDialog
+import Tkinter
+import tkFileDialog
 
 ############ Settings ##############
-plotxrange=[0,1.5]
+plotxrange=[0,1.5] #for ideality graph
 plotyrange=[0,3]
 plotxrange2=[0,1.5]
 plotyrange2=[10**-6,10**4]
@@ -18,12 +18,12 @@ d = 1 #direction of connectors' def = 1, acceptable args = +-1
 
 area=4.29e-6
 ############ File Search ############
-#root = Tkinter.Tk()
-#root.withdraw() #use to hide tkinter window
+root = Tkinter.Tk()
+root.withdraw() #use to hide tkinter window
 
-#currdir = os.getcwd()
-#tempdir = tkFileDialog.askdirectory(parent=root, initialdir='C:\\Users\\E0004621\\Desktop\\Zong Long\\Papers\\Data', title='Please select the data folder') #select directory for data
-tempdir = 'C:\\Users\\E0004621\\Desktop\\Pythontest' #Debugging use
+currdir = os.getcwd()
+tempdir = tkFileDialog.askdirectory(parent=root, initialdir='C:\\Users\\E0004621\\Desktop\\Zong Long\\Papers\\Data', title='Please select the data folder') #select directory for data
+#tempdir = 'C:\\Users\\E0004621\\Desktop\\Pythontest' #Debugging use
 #tempdir = 'C:\\Users\\E0004621\\Desktop\\Zong Long\\Papers\\Data\\180711' #Debugging use
 os.chdir(tempdir)
 
@@ -42,12 +42,14 @@ print wlist    #is shown on command prompt dialogue
 
 ############ Processing data ############
 def ana_var(sheet_name):
-
-    j = np.array(dat2[sheet_name])
-    j_hat = savgol_filter(j, 51, 3)
+    j = np.array([0]*len(dat1.Vs))
+    
+    for i in range(len(dat2[sheet_name])):
+        j[i] = dat2[sheet_name][i]
+    j_hat = savgol_filter(j, 51 if len(j)>51 else (len(j)/2)*2-1, 3)
     dev = np.gradient(np.array(dat1.Vs),j_hat)
     m0 = np.multiply(np.multiply(j, dev),1/(0.0259*T/300))
-    m_hat = savgol_filter(m0, 51, 3)
+    m_hat = savgol_filter(m0, 51 if len(m0)>51 else (len(j)/2)*2-1, 3)
     dev_df['dev %s' %sheet_name] = m_hat
     return
 
@@ -59,31 +61,33 @@ for file in wlist:
 
         if sheet_index == 0:
             sheet_name = 'j1'
-            dat1=pd.DataFrame({'Vs': sh.Vs})
+            dat1=pd.DataFrame({'Vs': sh.Vs[0:len(sh.Vs)/4]})
             dev_df = dat1.copy()
-            dat2=pd.DataFrame({'j1': sh.Id/(10*area)*d}) # ln current density in mA/cm2
+            dat2=pd.DataFrame({'j1': sh.Id[0:len(sh.Vs)/4]/(10*area)*d}) # ln current density in mA/cm2
             plot_array = dat1.join(np.abs(dat2))
 
         else:
             sheet_name = 'j%i' % (sheet_index-1)
-            dat2=pd.DataFrame({'j%i' % (sheet_index-1) : sh.Id/(10*area)*d})
+            dat2=pd.DataFrame({'j%i' % (sheet_index-1) : sh.Id[0:len(sh.Vs)/4]/(10*area)*d})
             plot_array = plot_array.join(np.abs(dat2))
-
-        m_list=ana_var(sheet_name)
+        if 'd' in str(file):
+            m_list=ana_var(sheet_name)
 ############ Plotting settings ############
-    plt.figure(1)    
-    dev_df.plot(x="Vs", figsize=(9,9))
-    plt.title('%s Ideality'%(file))
-    plt.grid(True)
-    plt.xlabel('Applied voltage(V)')
-    plt.ylabel('Ideality factor')
-    plt.xlim(plotxrange)
-    plt.ylim(plotyrange)
-    font={'size':18}
-    plt.rc('font',**font)
-    plt.legend(loc='lower left', prop={"size":12})
-    plt.savefig('processed_ideality/%s _m.png' %file)
-    plt.close()
+    if 'd' in str(file):
+        
+        plt.figure(1)    
+        dev_df.plot(x="Vs", figsize=(9,9))
+        plt.title('%s Ideality'%(file))
+        plt.grid(True)
+        plt.xlabel('Applied voltage(V)')
+        plt.ylabel('Ideality factor')
+        plt.xlim(plotxrange)
+        plt.ylim(plotyrange)
+        font={'size':18}
+        plt.rc('font',**font)
+        plt.legend(loc='lower left', prop={"size":12})
+        plt.savefig('processed_ideality/%s _m.png' %file)
+        plt.close()
 
     plt.figure(2)
     plot_array.plot(x="Vs", figsize=(9,9), logy=True) #Semi-log plot
