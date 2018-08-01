@@ -1,6 +1,4 @@
 # Set of Python files to process Solar Simulator and SCLC data
------------------------------------------------------------------
-
 Last updated: 01/08/2018
 
 
