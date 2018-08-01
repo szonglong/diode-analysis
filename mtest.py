@@ -45,7 +45,7 @@ def ana_var(sheet_name):
     j = np.array([0]*len(dat1.Vs),dtype=float)
     for i in range(len(dat2['j%s'%sheet_name])):
         j[i] = dat2['j%s'%sheet_name][i]
-    j_hat=smooth(j,4)   #self degined running median smoothing
+    j_hat=smooth(j,4)   #self designed running mean smoothing
     dev = np.gradient(np.array(dat1.Vs),j_hat)
     m0 = np.multiply(np.multiply(j, dev),1/(0.0259*T/300))
     m_hat = smooth(m0,1)
