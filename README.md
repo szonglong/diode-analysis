@@ -1,6 +1,5 @@
-===============================================================
 # Set of Python files to process Solar Simulator and SCLC data
-=============================================================== 
+-----------------------------------------------------------------
 
 Last updated: 01/08/2018
 
@@ -54,14 +53,12 @@ Helps the user find the exponential regime by first plotting a semi-log curve an
 
 ###############################################################
 
----------------------
 Known bugs:
 -First pixel must always be a complete sweep as length of df is based on that
 
 
 ---------------------
 Changelog can be found on github/szonglong/diode-analysis
-
 
 
 
