@@ -36,7 +36,7 @@ wlist=[] # get working list, only xls files
 for i in xrange(len(filelist)):
     ext = os.path.splitext(filelist[i])[1]
     filename = os.path.splitext(filelist[i])[0]
-    if ext  in ('.xls','.XLS'):
+    if ext  in ('.xls','.XLS') and 'd' in filename:
         wlist.append(os.path.splitext(filelist[i])[0])
 print wlist    #is shown on command prompt dialogue
 
@@ -44,13 +44,13 @@ print wlist    #is shown on command prompt dialogue
 def ana_var(sheet_name):
     j = np.array([0]*len(dat1.Vs))
     
-    for i in range(len(dat2[sheet_name])):
-        j[i] = dat2[sheet_name][i]
+    for i in range(len(dat2['j%s'%sheet_name])):
+        j[i] = dat2['j%s'%sheet_name][i]
     j_hat = savgol_filter(j, 51 if len(j)>51 else (len(j)/2)*2-1, 3)
     dev = np.gradient(np.array(dat1.Vs),j_hat)
     m0 = np.multiply(np.multiply(j, dev),1/(0.0259*T/300))
     m_hat = savgol_filter(m0, 51 if len(m0)>51 else (len(j)/2)*2-1, 3)
-    dev_df['dev %s' %sheet_name] = m_hat
+    dev_df['m%s' %sheet_name] = m_hat
     return
 
 for file in wlist:
@@ -60,46 +60,31 @@ for file in wlist:
         sh=wb.values()[sheet_index]
 
         if sheet_index == 0:
-            sheet_name = 'j1'
+            sheet_name = '1'
             dat1=pd.DataFrame({'Vs': sh.Vs[0:len(sh.Vs)/4]})
             dev_df = dat1.copy()
             dat2=pd.DataFrame({'j1': sh.Id[0:len(sh.Vs)/4]/(10*area)*d}) # ln current density in mA/cm2
             plot_array = dat1.join(np.abs(dat2))
 
         else:
-            sheet_name = 'j%i' % (sheet_index-1)
+            sheet_name = '%i' % (sheet_index-1)
             dat2=pd.DataFrame({'j%i' % (sheet_index-1) : sh.Id[0:len(sh.Vs)/4]/(10*area)*d})
             plot_array = plot_array.join(np.abs(dat2))
-        if 'd' in str(file):
-            m_list=ana_var(sheet_name)
+
+        m_list=ana_var(sheet_name)
 ############ Plotting settings ############
-    if 'd' in str(file):
-        
+
         plt.figure(1)    
-        dev_df.plot(x="Vs", figsize=(9,9))
-        plt.title('%s Ideality'%(file))
-        plt.grid(True)
-        plt.xlabel('Applied voltage(V)')
-        plt.ylabel('Ideality factor')
+        fig, ax = plt.subplots()
+        ax2 = ax.twinx()
+        dev_df.plot(x='Vs',ax=ax, ylim=plotyrange, figsize=(11,11))
+        plot_array.plot(x='Vs',ax=ax2, ylim=plotyrange2, logy=True, ls='--')
         plt.xlim(plotxrange)
-        plt.ylim(plotyrange)
+        plt.xlabel('Applied voltage(V)')
+        ax.set_ylabel('Local Ideality factor')
+        ax2.set_ylabel('Current density(mAcm$^-$$^2$)')
+        ax2.legend(loc=0)
         font={'size':18}
         plt.rc('font',**font)
-        plt.legend(loc='lower left', prop={"size":12})
         plt.savefig('processed_ideality/%s _m.png' %file)
         plt.close()
-
-    plt.figure(2)
-    plot_array.plot(x="Vs", figsize=(9,9), logy=True) #Semi-log plot
-    plt.title('%s semilog'%(file))
-    plt.grid(True)
-    plt.xlabel('Applied voltage(V)')
-    plt.ylabel('Log [Current density](mAcm$^-$$^2$)')
-    plt.xlim(plotxrange2)
-    plt.ylim(plotyrange2)
-    font={'size':18}
-    plt.rc('font',**font)
-    plt.legend(loc='lower right', prop={"size":12})
-
-    plt.savefig('processed_ideality/%s _p.png' %file)
-    plt.close()
