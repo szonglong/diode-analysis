@@ -111,7 +111,7 @@ for file in wlist:
             sheet_name = ['p%i' % (sheet_index-1),'j%i' % (sheet_index-1)]            
             dat2=pd.DataFrame({'j%i' % (sheet_index-1) : sh.Id/(10*area)*d})
             final_array=final_array.join(dat2)
-            plot_array = dat1.join(np.abs(dat2))
+            plot_array = plot_array.join(np.abs(dat2))
 
         if 'b' in str(file):
             ana_var(sheet_name)
