@@ -38,57 +38,37 @@ print wlist    #is shown on command prompt dialogue
 
 ############ Processing data ############
 def ana_var(sheet_name):                #analyse variable  
-    quadrant_counter = 2
-    
+
+    #Finds P_max - only the first quadrant
     power_array[sheet_name[0]]=dat1.Vs*dat2[sheet_name[1]]*(10*area)
-    power_array2 = power_array.truncate(after=quarter_length); power_array3 = power_array.truncate(before=quarter_length+1, after=2*quarter_length)
-    max_index2=power_array2[sheet_name[0]].idxmax(); max_index3=power_array3[sheet_name[0]].idxmax()
-    
-    try:
-        Pmax2 = power_array2[sheet_name[0]][max_index2]
-        Pmax3 = power_array3[sheet_name[0]][max_index3]
-        if Pmax2 < Pmax3:
-            Pmax = Pmax3
-            max_index = max_index3
-            quadrant_counter = 3
-        else:
-            Pmax = Pmax2
-            max_index = max_index2
-        
-    except TypeError:
-        Pmax = Pmax2
-        max_index = max_index2
+    power_array2 = power_array.truncate(after=quarter_length)
+    max_index2=power_array2[sheet_name[0]].idxmax()
+    Pmax2 = power_array2[sheet_name[0]][max_index2]
+    Pmax = Pmax2
+    max_index = max_index2
 
-    for voc_index in range(len(dat2[sheet_name[1]])):
-        Voc=-1 #invalid pixel: check d or pixel is shorted
+    #Finds Voc
+    voc_index = 0
+    for vi in range(len(dat2[sheet_name[1]])):
+        if dat2[sheet_name[1]][vi] < 0:
+            voc_index = vi
+            break
+    if voc_index == 0:
+        Voc=-1 #invalid pixel: check d or pixel is bad
         Rs=9e9   
-        if quadrant_counter == 2:
-            if dat2[sheet_name[1]][voc_index] < 0:
-                if voc_index == 0:
-                    break
-                else:
-                    Voc = (dat1['Vs'][voc_index-1]*dat2[sheet_name[1]][voc_index]-dat1['Vs'][voc_index]*dat2[sheet_name[1]][voc_index-1])/(dat2[sheet_name[1]][voc_index]-dat2[sheet_name[1]][voc_index-1])
-                    Rs = abs((dat1['Vs'][voc_index]-dat1['Vs'][voc_index-1])/(dat2[sheet_name[1]][voc_index]-dat2[sheet_name[1]][voc_index-1]))*1000 #Ohm cm2
-                    break
-        else:
-            voc_index += quarter_length
-            if dat2[sheet_name[1]][voc_index] > 0:
+    else:
+        Voc = (dat1['Vs'][voc_index-1]*dat2[sheet_name[1]][voc_index]-dat1['Vs'][voc_index]*dat2[sheet_name[1]][voc_index-1])/(dat2[sheet_name[1]][voc_index]-dat2[sheet_name[1]][voc_index-1])
+        Rs = abs((dat1['Vs'][voc_index]-dat1['Vs'][voc_index-1])/(dat2[sheet_name[1]][voc_index]-dat2[sheet_name[1]][voc_index-1]))*1000 #Ohm cm2
+    
 
-                Voc = (dat1['Vs'][voc_index-1]*dat2[sheet_name[1]][voc_index]-dat1['Vs'][voc_index]*dat2[sheet_name[1]][voc_index-1])/(dat2[sheet_name[1]][voc_index]-dat2[sheet_name[1]][voc_index-1])
-                Rs = abs((dat1['Vs'][voc_index]-dat1['Vs'][voc_index-1])/(dat2[sheet_name[1]][voc_index]-dat2[sheet_name[1]][voc_index-1]))*1000
-                break
-            
     Iinj = dat2[sheet_name[1]][quarter_length]*(10*area)*-1000 if len(dat2[sheet_name[1]])>quarter_length else None
     Vmpp = dat1.Vs[max_index]
     Jmpp = dat2[sheet_name[1]][max_index]
-    try:
-        Jsc = dat2[sheet_name[1]][0] if quadrant_counter == 2 else dat2[sheet_name[1]][quarter_length*2]
-    except KeyError:
-        Jsc = dat2[sheet_name[1]][0]
+    Jsc = dat2[sheet_name[1]][0]
     PCE = Pmax/(1000*area/m)*100
     FF = Jmpp*Vmpp/(Jsc*Voc)*100
 
-    ana_array[sheet_name[0]] = [Jsc,Voc,Iinj,Pmax,Vmpp,Jmpp,Rs,PCE,FF]
+    ana_array[sheet_name[0]] = [Jsc,Voc,Iinj,Pmax,Vmpp,Jmpp,Rs,PCE,FF] #Arranges in an array to put in excel
     
 for file in wlist:
     wb=pd.read_excel(r'%s.xls' %file, None)
@@ -104,7 +84,7 @@ for file in wlist:
             final_array = dat1.join((dat2))
             plot_array = dat1.join(np.abs(dat2))
 
-            power_array = dat1
+            power_array = dat1.copy()
             quarter_length=int(len(power_array)/4)
             
         else:
@@ -119,8 +99,6 @@ for file in wlist:
     #Final array has columns Vs and J1~J8
     plot_array.plot(x="Vs", figsize=(9,9), logy=True) #Semi-log plot
 
-
-
 ############ Plotting settings ############
     plt.title('%s'%(file))
     plt.grid(True)
@@ -131,7 +109,6 @@ for file in wlist:
     font={'size':18}
     plt.rc('font',**font)
     plt.legend(loc='lower left', prop={"size":12})
-
 
 ############ Export ############
     writer = pd.ExcelWriter('processed_semilog/%s _p.xlsx' %file, engine='xlsxwriter')
