@@ -8,6 +8,7 @@ import tkFileDialog
 ############ Settings ##############
 plotxrange=[-3,3]
 plotyrange=[10**-6,10**4]
+plotyrange2 = [0,20]
 
 m = 1 #mismatch factor; def = 1
 d = 1 #direction of connectors' def = 1, acceptable args = +-1
@@ -70,6 +71,14 @@ def ana_var(sheet_name):                #analyse variable
 
     ana_array[sheet_name[0]] = [Jsc,Voc,Iinj,Pmax,Vmpp,Jmpp,Rs,PCE,FF] #Arranges in an array to put in excel
     
+def smooth(iterable,repeats):
+    for t in range(repeats):
+        for i in range(len(iterable)):
+            if i in [0,1,len(iterable)-2,len(iterable)-1]:
+                pass
+            else:
+               iterable[i] = (0.25*(iterable[i-2]+iterable[i+2])+0.5*(iterable[i+1]+iterable[i-1])+iterable[i])/2.5
+    return iterable
 for file in wlist:
     wb=pd.read_excel(r'%s.xls' %file, None)
     ana_array = pd.DataFrame(index=['Jsc (mA/cm2)','Voc (V)','I_inj (mA)','Pmax (W)','Vmpp (V)','Jmpp (mA/cm2)','Rs (Ohm cm2)','PCE (%)','FF (%)'])
@@ -80,7 +89,7 @@ for file in wlist:
         if sheet_index == 0:
             sheet_name = ['p1','j1']            
             dat1=pd.DataFrame({'Vs': sh.Vs})
-            dat2=pd.DataFrame({'j1': sh.Id/(10*area)*d}) #current density in mA/cm2
+            dat2=pd.DataFrame({'j1': smooth(sh.Is,3)/(10*area)*d}) if 'd' in str(file) else pd.DataFrame({'j1': sh.Is/(10*area)*d}) #current density in mA/cm2
             final_array = dat1.join((dat2))
             plot_array = dat1.join(np.abs(dat2))
 
@@ -89,7 +98,8 @@ for file in wlist:
             
         else:
             sheet_name = ['p%i' % (sheet_index-1),'j%i' % (sheet_index-1)]            
-            dat2=pd.DataFrame({'j%i' % (sheet_index-1) : sh.Id/(10*area)*d})
+            dat2=pd.DataFrame({'j%i' % (sheet_index-1): smooth(sh.Is,3)/(10*area)*d}) if 'd' in str(file) else pd.DataFrame({'j%i' % (sheet_index-1): sh.Is/(10*area)*d}) #current density in mA/cm2
+
             final_array=final_array.join(dat2)
             plot_array = plot_array.join(np.abs(dat2))
 
@@ -97,15 +107,17 @@ for file in wlist:
             ana_var(sheet_name)
         
     #Final array has columns Vs and J1~J8
-    plot_array.plot(x="Vs", figsize=(9,9), logy=True) #Semi-log plot
-
+    fig, ax = plt.subplots()
+#    ax2 = ax.twinx()
+    plot_array.plot(x="Vs", ax=ax, ylim=plotyrange, figsize=(9,9), logy=True)#, ls='--') #Semi-log plot
+#    plot_array.plot(x="Vs", ax=ax2, ls=':', ylim=plotyrange2)
 ############ Plotting settings ############
     plt.title('%s'%(file))
     plt.grid(True)
     plt.xlabel('Applied voltage(V)')
-    plt.ylabel('Log [Current density](mAcm$^-$$^2$)')
+    ax.set_ylabel('Log [Current density](mAcm$^-$$^2$)')
+#    ax2.set_ylabel('Current density(mAcm$^-$$^2$)')
     plt.xlim(plotxrange)
-    plt.ylim(plotyrange)
     font={'size':18}
     plt.rc('font',**font)
     plt.legend(loc='lower left', prop={"size":12})
