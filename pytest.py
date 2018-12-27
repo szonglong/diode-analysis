@@ -19,7 +19,7 @@ root = Tkinter.Tk()
 root.withdraw() #use to hide tkinter window
 
 currdir = os.getcwd()
-tempdir = tkFileDialog.askdirectory(parent=root, initialdir='C:\\Users\\E0004621\\Desktop\\Zong Long\\Papers\\Data', title='Please select the data folder') #select directory for data
+tempdir = tkFileDialog.askdirectory(parent=root, initialdir='C:\\Users\\E0004621\\Desktop\\Zong Long\\Papers\\Data\\3. EIL\\SolarCell', title='Please select the data folder') #select directory for data
 #tempdir = 'C:\\Users\\E0004621\\Desktop\\Pythontest' #Debugging use
 #tempdir = 'C:\\Users\\E0004621\\Desktop\\Zong Long\\Papers\\Data\\180711' #Debugging use
 os.chdir(tempdir)
@@ -40,28 +40,14 @@ print wlist    #is shown on command prompt dialogue
 ############ Processing data ############
 def ana_var(sheet_name):                #analyse variable  
 
-    #Finds P_max - only the first quadrant
-    power_array[sheet_name[0]]=dat1.Vs*dat2[sheet_name[1]]*(10*area)
-    power_array2 = power_array.truncate(after=quarter_length)
-    max_index2=power_array2[sheet_name[0]].idxmax()
-    Pmax2 = power_array2[sheet_name[0]][max_index2]
-    Pmax = Pmax2
-    max_index = max_index2
-
-    #Finds Voc
-    voc_index = 0
-    for vi in range(len(dat2[sheet_name[1]])):
-        if dat2[sheet_name[1]][vi] < 0:
-            voc_index = vi
-            break
-    if voc_index == 0:
-        Voc=-1 #invalid pixel: check d or pixel is bad
-        Rs=9e9   
-    else:
-        Voc = (dat1['Vs'][voc_index-1]*dat2[sheet_name[1]][voc_index]-dat1['Vs'][voc_index]*dat2[sheet_name[1]][voc_index-1])/(dat2[sheet_name[1]][voc_index]-dat2[sheet_name[1]][voc_index-1])
-        Rs = abs((dat1['Vs'][voc_index]-dat1['Vs'][voc_index-1])/(dat2[sheet_name[1]][voc_index]-dat2[sheet_name[1]][voc_index-1]))*1000 #Ohm cm2
+#    #Finds P_max - only the first quadrant
+#    power_array[sheet_name[0]]=dat1.Vs*dat2[sheet_name[1]]*(10*area)
+#    power_array2 = power_array.truncate(after=quarter_length)
+#    max_index=power_array2[sheet_name[0]].idxmax()
+#    Pmax = power_array2[sheet_name[0]][max_index]
     
-
+    max_index, Pmax = find_Pmax(dat1, dat2, sheet_name, 0)
+    Voc, Rs = find_voc(dat2, sheet_name, inv = 0)
     Iinj = dat2[sheet_name[1]][quarter_length]*(10*area)*-1000 if len(dat2[sheet_name[1]])>quarter_length else None
     Vmpp = dat1.Vs[max_index]
     Jmpp = dat2[sheet_name[1]][max_index]
@@ -71,43 +57,55 @@ def ana_var(sheet_name):                #analyse variable
 
     ana_array[sheet_name[0]] = [Jsc,Voc,Iinj,Rs,PCE,FF] #Arranges in an array to put in excel
     
+def find_Pmax(dat1, dat2, sheet_name, inv):
+    #Finds P_max - only the first quadrant
+    power_array[sheet_name[0]]=dat1.Vs*dat2[sheet_name[1]]*(10*area)
+    power_array2 = power_array.truncate(after=quarter_length)
+    max_index=power_array2[sheet_name[0]].idxmax()
+    Pmax = power_array2[sheet_name[0]][max_index]    
+    return max_index, Pmax
     
+def find_voc(dat2,sheet_name,inv):
+    #Finds Voc via interpolation
+    voc_index = 0
+
+    for vi in range(len(dat2[sheet_name[1]])):
+        if inv == 0:
+            if dat2[sheet_name[1]][vi] < 0:
+                voc_index = vi
+                break
+        elif inv == 1:
+            if dat2[sheet_name[1]][vi] > 0:
+                voc_index = vi
+                break
+    if voc_index == 0:
+        Voc=-99 #invalid pixel: check d or pixel is bad
+        Rs=9e9   
+    else:
+        Voc = (dat1['Vs'][voc_index-1]*dat2[sheet_name[1]][voc_index]-dat1['Vs'][voc_index]*dat2[sheet_name[1]][voc_index-1])/(dat2[sheet_name[1]][voc_index]-dat2[sheet_name[1]][voc_index-1])
+        Rs = abs((dat1['Vs'][voc_index]-dat1['Vs'][voc_index-1])/(dat2[sheet_name[1]][voc_index]-dat2[sheet_name[1]][voc_index-1]))*1000 #Ohm cm2
+        
+    return Voc, Rs
     
 def ana_var_inv(sheet_name):                #analyse variable  
 
-    trigger_OOI = 1
     #Finds P_max - only the first quadrant
     power_array[sheet_name[0]]=dat1.Vs*dat2[sheet_name[1]]*(10*area)
     power_array2 = power_array.truncate(before=half_length)
-#    print(power_array2)
     max_index2=power_array2[sheet_name[0]].idxmax()
     if type(max_index2) != int:
         max_index = 0
         Pmax2 = 0
         Voc = 99
         Rs = 9e9
-        trigger_OOI = 0
 
     else:
         Pmax2 = power_array2[sheet_name[0]][max_index2]
         
         max_index = max_index2
+        Voc, Rs = find_voc(dat2, sheet_name, inv=1)
     Pmax = Pmax2
 
-    #Finds Voc via interpolation
-    voc_index = 0
-    if trigger_OOI != 0:
-        for vi in range(len(dat2[sheet_name[1]])):
-            if dat2[sheet_name[1]][vi] > 0:
-                voc_index = vi
-                break
-        if voc_index == 0:
-            Voc=-1 #invalid pixel: check d or pixel is bad
-            Rs=9e9   
-        else:
-            Voc = (dat1['Vs'][voc_index-1]*dat2[sheet_name[1]][voc_index]-dat1['Vs'][voc_index]*dat2[sheet_name[1]][voc_index-1])/(dat2[sheet_name[1]][voc_index]-dat2[sheet_name[1]][voc_index-1])
-            Rs = abs((dat1['Vs'][voc_index]-dat1['Vs'][voc_index-1])/(dat2[sheet_name[1]][voc_index]-dat2[sheet_name[1]][voc_index-1]))*1000 #Ohm cm2
-    
 
     Iinj = dat2[sheet_name[1]][quarter_length]*(10*area)*-1000 if len(dat2[sheet_name[1]])>quarter_length else None
     Vmpp = dat1.Vs[max_index]
@@ -126,6 +124,17 @@ def smooth(iterable,repeats):
             else:
                iterable[i] = (0.25*(iterable[i-2]+iterable[i+2])+0.5*(iterable[i+1]+iterable[i-1])+iterable[i])/2.5
     return iterable
+
+
+
+
+
+
+
+
+
+############ Run programme ############
+
 
 for file in wlist:
     wb0 = xlrd.open_workbook(r'%s.xls' %file, logfile=open(os.devnull, 'w'))
@@ -184,3 +193,4 @@ for file in wlist:
     
     plt.savefig('processed_semilog/%s _p.png' %file)
     plt.close()
+    print(str(file))
