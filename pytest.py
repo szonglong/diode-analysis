@@ -42,8 +42,10 @@ def ana_var(sheet_name,inv):                #analyse variable
 
     max_index, Pmax = find_Pmax(dat1, dat2, sheet_name, inv)
     Voc, Rs = find_voc(dat2, sheet_name, inv)
-    
-    Iinj = dat2[sheet_name[1]][quarter_length]*(10*area)*-1000 if len(dat2[sheet_name[1]])>quarter_length else None
+    if inv == 0:
+        Iinj = dat2[sheet_name[1]][quarter_length]*(10*area)*-1000 if len(dat2[sheet_name[1]])>quarter_length else None
+    elif inv == 1:
+        Iinj = dat2[sheet_name[1]][half_length+quarter_length]*(10*area)*-1000 if len(dat2[sheet_name[1]])>half_length+quarter_length else None
     Vmpp = dat1.Vs[max_index]
     Jmpp = dat2[sheet_name[1]][max_index]
     Jsc = dat2[sheet_name[1]][0]
