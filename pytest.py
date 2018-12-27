@@ -2,17 +2,16 @@ import pandas as pd
 import os
 import numpy as np
 import matplotlib.pyplot as plt
+import xlrd
 import Tkinter
 import tkFileDialog
 
 ############ Settings ##############
 plotxrange=[-3,3]
 plotyrange=[10**-6,10**4]
-plotyrange2 = [0,20]
 
 m = 1 #mismatch factor; def = 1
-d = -1 #direction of connectors' def = 1, acceptable args = +-1
-
+d = -1 # depends on which I is chosen. Default d = -1
 
 area=4.29e-6
 ############ File Search ############
@@ -129,14 +128,15 @@ def smooth(iterable,repeats):
     return iterable
 
 for file in wlist:
-    wb=pd.read_excel(r'%s.xls' %file, None)
+    wb0 = xlrd.open_workbook(r'%s.xls' %file, logfile=open(os.devnull, 'w'))
+    wb=pd.read_excel(wb0, None, engine='xlrd')
     ana_array = pd.DataFrame(index=['Jsc (mA/cm2)','Voc (V)','I_inj (mA)','Rs (Ohm cm2)','PCE (%)','FF (%)'])
     
     for sheet_index in range(0,1) + range(3,len(wb.keys())):  
         sh=wb.values()[sheet_index]
-        
+
         if sheet_index == 0:
-            sheet_name = ['p1','j1']            
+            sheet_name = ['p1','j1']
             dat1=pd.DataFrame({'Vs': sh.Vs})
             dat2=pd.DataFrame({'j1': smooth(sh.Is,3)/(10*area)*d}) if 'd' in str(file) else pd.DataFrame({'j1': sh.Is/(10*area)*d}) #current density in mA/cm2
             final_array = dat1.join((dat2))
