@@ -37,17 +37,12 @@ for i in xrange(len(filelist)):
         wlist.append(os.path.splitext(filelist[i])[0])
 print wlist    #is shown on command prompt dialogue
 
-############ Processing data ############
-def ana_var(sheet_name):                #analyse variable  
+############ Function definitions for data processing ############
+def ana_var(sheet_name,inv):                #analyse variable  
 
-#    #Finds P_max - only the first quadrant
-#    power_array[sheet_name[0]]=dat1.Vs*dat2[sheet_name[1]]*(10*area)
-#    power_array2 = power_array.truncate(after=quarter_length)
-#    max_index=power_array2[sheet_name[0]].idxmax()
-#    Pmax = power_array2[sheet_name[0]][max_index]
+    max_index, Pmax = find_Pmax(dat1, dat2, sheet_name, inv)
+    Voc, Rs = find_voc(dat2, sheet_name, inv)
     
-    max_index, Pmax = find_Pmax(dat1, dat2, sheet_name, 0)
-    Voc, Rs = find_voc(dat2, sheet_name, inv = 0)
     Iinj = dat2[sheet_name[1]][quarter_length]*(10*area)*-1000 if len(dat2[sheet_name[1]])>quarter_length else None
     Vmpp = dat1.Vs[max_index]
     Jmpp = dat2[sheet_name[1]][max_index]
@@ -56,15 +51,7 @@ def ana_var(sheet_name):                #analyse variable
     FF = Jmpp*Vmpp/(Jsc*Voc)*100
 
     ana_array[sheet_name[0]] = [Jsc,Voc,Iinj,Rs,PCE,FF] #Arranges in an array to put in excel
-    
-def find_Pmax(dat1, dat2, sheet_name, inv):
-    #Finds P_max - only the first quadrant
-    power_array[sheet_name[0]]=dat1.Vs*dat2[sheet_name[1]]*(10*area)
-    power_array2 = power_array.truncate(after=quarter_length)
-    max_index=power_array2[sheet_name[0]].idxmax()
-    Pmax = power_array2[sheet_name[0]][max_index]    
-    return max_index, Pmax
-    
+
 def find_voc(dat2,sheet_name,inv):
     #Finds Voc via interpolation
     voc_index = 0
@@ -86,37 +73,23 @@ def find_voc(dat2,sheet_name,inv):
         Rs = abs((dat1['Vs'][voc_index]-dat1['Vs'][voc_index-1])/(dat2[sheet_name[1]][voc_index]-dat2[sheet_name[1]][voc_index-1]))*1000 #Ohm cm2
         
     return Voc, Rs
-    
-def ana_var_inv(sheet_name):                #analyse variable  
-
+        
+def find_Pmax(dat1, dat2, sheet_name, inv):
     #Finds P_max - only the first quadrant
     power_array[sheet_name[0]]=dat1.Vs*dat2[sheet_name[1]]*(10*area)
-    power_array2 = power_array.truncate(before=half_length)
-    max_index2=power_array2[sheet_name[0]].idxmax()
-    if type(max_index2) != int:
+    if inv == 0:
+        power_array2 = power_array.truncate(after=quarter_length)
+    elif inv == 1:
+        power_array2 = power_array.truncate(before=half_length, after = half_length+quarter_length)
+    max_index=power_array2[sheet_name[0]].idxmax()
+    if type(max_index) != int:
         max_index = 0
-        Pmax2 = 0
-        Voc = 99
-        Rs = 9e9
-
+        Pmax = 0
     else:
-        Pmax2 = power_array2[sheet_name[0]][max_index2]
-        
-        max_index = max_index2
-        Voc, Rs = find_voc(dat2, sheet_name, inv=1)
-    Pmax = Pmax2
+        Pmax = power_array2[sheet_name[0]][max_index]    
+    return max_index, Pmax
 
-
-    Iinj = dat2[sheet_name[1]][quarter_length]*(10*area)*-1000 if len(dat2[sheet_name[1]])>quarter_length else None
-    Vmpp = dat1.Vs[max_index]
-    Jmpp = dat2[sheet_name[1]][max_index]
-    Jsc = dat2[sheet_name[1]][0]
-    PCE = Pmax/(1000*area/m)*100
-    FF = Jmpp*Vmpp/(Jsc*Voc)*100
-
-    ana_array[sheet_name[0]] = [Jsc,Voc,Iinj,Rs,PCE,FF] #Arranges in an array to put in excel
-    
-def smooth(iterable,repeats):
+def smooth(iterable,repeats):           #Smoothing function to remove some jaggedness
     for t in range(repeats):
         for i in range(len(iterable)):
             if i in [0,1,len(iterable)-2,len(iterable)-1]:
@@ -126,16 +99,7 @@ def smooth(iterable,repeats):
     return iterable
 
 
-
-
-
-
-
-
-
 ############ Run programme ############
-
-
 for file in wlist:
     wb0 = xlrd.open_workbook(r'%s.xls' %file, logfile=open(os.devnull, 'w'))
     wb=pd.read_excel(wb0, None, engine='xlrd')
@@ -163,21 +127,21 @@ for file in wlist:
             plot_array = plot_array.join(np.abs(dat2))
 
         if 'bi' in str(file):
-            ana_var_inv(sheet_name)
+            ana_var(sheet_name,inv=1)
         elif 'b' in str(file):
-            ana_var(sheet_name)
+            ana_var(sheet_name,inv=0)
         
     #Final array has columns Vs and J1~J8
     fig, ax = plt.subplots()
-#    ax2 = ax.twinx()
+
     plot_array.plot(x="Vs", ax=ax, ylim=plotyrange, figsize=(9,9), logy=True)#, ls='--') #Semi-log plot
-#    plot_array.plot(x="Vs", ax=ax2, ls=':', ylim=plotyrange2)
+
+
 ############ Plotting settings ############
     plt.title('%s'%(file))
     plt.grid(True)
     plt.xlabel('Applied voltage(V)')
     ax.set_ylabel('Log [Current density](mAcm$^-$$^2$)')
-#    ax2.set_ylabel('Current density(mAcm$^-$$^2$)')
     plt.xlim(plotxrange)
     font={'size':18}
     plt.yticks(np.geomspace(10**-6, 10**4, num=11),(np.geomspace(10**-6, 10**4, num=11).astype(float)))
@@ -193,4 +157,4 @@ for file in wlist:
     
     plt.savefig('processed_semilog/%s _p.png' %file)
     plt.close()
-    print(str(file))
+    print("Completed.. " + str(file))
