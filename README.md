@@ -1,14 +1,14 @@
 # Set of Python files to process Solar Simulator and SCLC data
-Last updated: 01/08/2018
+Last updated: 27/12/2018
 
 
 
 pytest.py, Diode_analysis.cmd
 ===============================================================
-Make graphs and a concat .xls from Keithley voltage sweep data
+Make graphs and a concat .xls from Keithley voltage sweep data \n
 Author: Zong Long 16/07/2018
-Version: 1.9.2
-Last updated: 01/08/2018
+Version: 2.0.0
+Last updated: 27/12/2018
 
 Description
 Running this cmd brings up a prompt to select folder where DATA is kept at. After selection, the python file runs to produce graphs and a concat + analysis (for bright only) .xls file. To edit, both the .cmd file and the .py file will have to be edited in harmony. Note that file directory for .py is hard coded at the moment.
