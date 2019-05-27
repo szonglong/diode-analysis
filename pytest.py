@@ -8,7 +8,7 @@ import tkFileDialog
 
 ############ Settings ##############
 plotxrange=[-3,3]
-plotyrange=[10**-6,10**4]
+plotyrange=[10**-6,10**4]   
 
 m = 1 #mismatch factor; def = 1
 d = -1 # depends on which I is chosen. Default d = -1
@@ -19,7 +19,7 @@ root = Tkinter.Tk()
 root.withdraw() #use to hide tkinter window
 
 currdir = os.getcwd()
-tempdir = tkFileDialog.askdirectory(parent=root, initialdir='C:\\Users\\E0004621\\Desktop\\Zong Long\\Papers\\Data\\3. EIL\\SolarCell', title='Please select the data folder') #select directory for data
+tempdir = tkFileDialog.askdirectory(parent=root, initialdir='C:\\Users\\E0004621\\Desktop\\Zong Long\\Papers\\Data\\4. Energy level alignment\\Solar Cell', title='Please select the data folder') #select directory for data
 #tempdir = 'C:\\Users\\E0004621\\Desktop\\Pythontest' #Debugging use
 #tempdir = 'C:\\Users\\E0004621\\Desktop\\Zong Long\\Papers\\Data\\180711' #Debugging use
 os.chdir(tempdir)
@@ -43,7 +43,10 @@ def ana_var(sheet_name,inv):                #analyse variable
     max_index, Pmax = find_Pmax(dat1, dat2, sheet_name, inv)
     Voc, Rs = find_voc(dat2, sheet_name, inv)
     if inv == 0:
-        Iinj = dat2[sheet_name[1]][quarter_length]*(10*area)*-1000 if len(dat2[sheet_name[1]])>quarter_length else None
+        if 'od' in str(file):
+            Iinj = dat2[sheet_name[1]][half_length]*(10*area)*-1000 if len(dat2[sheet_name[1]])>half_length else None
+        else:
+            Iinj = dat2[sheet_name[1]][quarter_length]*(10*area)*-1000 if len(dat2[sheet_name[1]])>quarter_length else None
     elif inv == 1:
         Iinj = dat2[sheet_name[1]][half_length+quarter_length]*(10*area)*-1000 if len(dat2[sheet_name[1]])>half_length+quarter_length else None
     Vmpp = dat1.Vs[max_index]
@@ -80,7 +83,7 @@ def find_Pmax(dat1, dat2, sheet_name, inv):
     #Finds P_max - only the first quadrant
     power_array[sheet_name[0]]=dat1.Vs*dat2[sheet_name[1]]*(10*area)
     if inv == 0:
-        power_array2 = power_array.truncate(after=quarter_length)
+        power_array2 = power_array.truncate(after=half_length) if 'od' in str(file) else power_array.truncate(after=quarter_length)
     elif inv == 1:
         power_array2 = power_array.truncate(before=half_length, after = half_length+quarter_length)
     max_index=power_array2[sheet_name[0]].idxmax()
@@ -91,14 +94,14 @@ def find_Pmax(dat1, dat2, sheet_name, inv):
         Pmax = power_array2[sheet_name[0]][max_index]    
     return max_index, Pmax
 
-def smooth(iterable,repeats):           #Smoothing function to remove some jaggedness
-    for t in range(repeats):
-        for i in range(len(iterable)):
-            if i in [0,1,len(iterable)-2,len(iterable)-1]:
-                pass
-            else:
-               iterable[i] = (0.25*(iterable[i-2]+iterable[i+2])+0.5*(iterable[i+1]+iterable[i-1])+iterable[i])/2.5
-    return iterable
+#def smooth(iterable,repeats):           #Smoothing function to remove some jaggedness
+#    for t in range(repeats):
+#        for i in range(len(iterable)):
+#            if i in [0,1,len(iterable)-2,len(iterable)-1]:
+#                pass
+#            else:
+#               iterable[i] = (0.25*(iterable[i-2]+iterable[i+2])+0.5*(iterable[i+1]+iterable[i-1])+iterable[i])/2.5
+#    return iterable
 
 
 ############ Run programme ############
@@ -113,7 +116,8 @@ for file in wlist:
         if sheet_index == 0:
             sheet_name = ['p1','j1']
             dat1=pd.DataFrame({'Vs': sh.Vs})
-            dat2=pd.DataFrame({'j1': smooth(sh.Is,3)/(10*area)*d}) if 'd' in str(file) else pd.DataFrame({'j1': sh.Is/(10*area)*d}) #current density in mA/cm2
+#            dat2=pd.DataFrame({'j1': smooth(sh.Is,3)/(10*area)*d}) if 'd' in str(file) else pd.DataFrame({'j1': sh.Is/(10*area)*d}) #current density in mA/cm2
+            dat2=pd.DataFrame({'j1': (sh.Is)/(10*area)*d})
             final_array = dat1.join((dat2))
             plot_array = dat1.join(np.abs(dat2))
 
@@ -123,8 +127,8 @@ for file in wlist:
             
         else:
             sheet_name = ['p%i' % (sheet_index-1),'j%i' % (sheet_index-1)]            
-            dat2=pd.DataFrame({'j%i' % (sheet_index-1): smooth(sh.Is,3)/(10*area)*d}) if 'd' in str(file) else pd.DataFrame({'j%i' % (sheet_index-1): sh.Is/(10*area)*d}) #current density in mA/cm2
-
+#            dat2=pd.DataFrame({'j%i' % (sheet_index-1): smooth(sh.Is,3)/(10*area)*d}) if 'd' in str(file) else pd.DataFrame({'j%i' % (sheet_index-1): sh.Is/(10*area)*d}) #current density in mA/cm2
+            dat2=pd.DataFrame({'j%i' % (sheet_index-1): (sh.Is)/(10*area)*d})
             final_array=final_array.join(dat2)
             plot_array = plot_array.join(np.abs(dat2))
 
@@ -144,6 +148,7 @@ for file in wlist:
     plt.grid(True)
     plt.xlabel('Applied voltage(V)')
     ax.set_ylabel('Log [Current density](mAcm$^-$$^2$)')
+#    plotxrange= [0,1.3] if 'od' in str(file) else [-3,3]
     plt.xlim(plotxrange)
     font={'size':18}
     plt.yticks(np.geomspace(10**-6, 10**4, num=11),(np.geomspace(10**-6, 10**4, num=11).astype(float)))
