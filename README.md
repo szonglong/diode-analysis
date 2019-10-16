@@ -7,11 +7,13 @@ pytest.py, Diode_analysis.cmd
 ===============================================================
 Make graphs and a concat .xls from Keithley voltage sweep data \n
 Author: Zong Long 16/07/2018
-Version: 2.0.0
-Last updated: 27/12/2018
+Version: 2.2.0
+Last updated: 15/10/2019
 
 Description
 Running this cmd brings up a prompt to select folder where DATA is kept at. After selection, the python file runs to produce graphs and a concat + analysis (for bright only) .xls file. To edit, both the .cmd file and the .py file will have to be edited in harmony. Note that file directory for .py is hard coded at the moment.
+
+View update log at pytest.py branch
 
 Before running: Make sure that 
 1) Anaconda or equivalent is installed in user path variable, or all modules are installed previously.
