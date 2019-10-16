@@ -1,3 +1,19 @@
+##############################################################################
+## pytest.py (Python 2.7)
+## Function: Parse and process dark and bright curves
+## Author: Seah Zong Long
+## Version: 2.2.0
+## Last modified: 16/10/2019
+
+## Changelog: updated for new computer
+
+## Instructions:
+## File name contains: "b" - bright curve analysis; output ana array and graph
+## File name contains: "bi" - inverted bright curve analysis; output ana array and graph
+## File name contains: "d" - dark curve analysis; output final array and graph
+## File name contains: "od" - Vbi analysis; output ana array and graph, half-length
+##############################################################################
+
 import pandas as pd
 import os
 import numpy as np
@@ -17,11 +33,11 @@ area=4.29e-6
 ############ File Search ############
 root = Tkinter.Tk()
 root.withdraw() #use to hide tkinter window
+root.wm_attributes('-topmost', 1) # Forces askdirectory on top
 
 currdir = os.getcwd()
-tempdir = tkFileDialog.askdirectory(parent=root, initialdir='C:\\Users\\E0004621\\Desktop\\Zong Long\\Papers\\Data\\4. Energy level alignment\\Solar Cell', title='Please select the data folder') #select directory for data
+tempdir = tkFileDialog.askdirectory(parent=root, initialdir='C:\\Users\\E0004621\\Desktop\\ONDL Computer sync\\Papers\\Data\\4. Energy level alignment\\Solar Cell', title='Please select the data folder') #select directory for data
 #tempdir = 'C:\\Users\\E0004621\\Desktop\\Pythontest' #Debugging use
-#tempdir = 'C:\\Users\\E0004621\\Desktop\\Zong Long\\Papers\\Data\\180711' #Debugging use
 os.chdir(tempdir)
 
 filelist = os.listdir(os.getcwd())  # working dir
@@ -49,11 +65,12 @@ def ana_var(sheet_name,inv):                #analyse variable
             Iinj = dat2[sheet_name[1]][quarter_length]*(10*area)*-1000 if len(dat2[sheet_name[1]])>quarter_length else None
     elif inv == 1:
         Iinj = dat2[sheet_name[1]][half_length+quarter_length]*(10*area)*-1000 if len(dat2[sheet_name[1]])>half_length+quarter_length else None
-    Vmpp = dat1.Vs[max_index]
+    Vmpp = dat1.Vs[max_index]   #mpp -- max power point
     Jmpp = dat2[sheet_name[1]][max_index]
     Jsc = dat2[sheet_name[1]][0]
-    PCE = Pmax/(1000*area/m)*100
+    PCE = Pmax/(1000*area)*100
     FF = Jmpp*Vmpp/(Jsc*Voc)*100
+    
 
     ana_array[sheet_name[0]] = [Jsc,Voc,Iinj,Rs,PCE,FF] #Arranges in an array to put in excel
 
@@ -87,7 +104,7 @@ def find_Pmax(dat1, dat2, sheet_name, inv):
     elif inv == 1:
         power_array2 = power_array.truncate(before=half_length, after = half_length+quarter_length)
     max_index=power_array2[sheet_name[0]].idxmax()
-    if type(max_index) != int:
+    if (type(max_index) != np.int64) and (type(max_index) != int):
         max_index = 0
         Pmax = 0
     else:
@@ -117,7 +134,7 @@ for file in wlist:
             sheet_name = ['p1','j1']
             dat1=pd.DataFrame({'Vs': sh.Vs})
 #            dat2=pd.DataFrame({'j1': smooth(sh.Is,3)/(10*area)*d}) if 'd' in str(file) else pd.DataFrame({'j1': sh.Is/(10*area)*d}) #current density in mA/cm2
-            dat2=pd.DataFrame({'j1': (sh.Is)/(10*area)*d})
+            dat2=pd.DataFrame({'j1': (sh.Is)/(10*area*m)*d})
             final_array = dat1.join((dat2))
             plot_array = dat1.join(np.abs(dat2))
 
@@ -128,7 +145,7 @@ for file in wlist:
         else:
             sheet_name = ['p%i' % (sheet_index-1),'j%i' % (sheet_index-1)]            
 #            dat2=pd.DataFrame({'j%i' % (sheet_index-1): smooth(sh.Is,3)/(10*area)*d}) if 'd' in str(file) else pd.DataFrame({'j%i' % (sheet_index-1): sh.Is/(10*area)*d}) #current density in mA/cm2
-            dat2=pd.DataFrame({'j%i' % (sheet_index-1): (sh.Is)/(10*area)*d})
+            dat2=pd.DataFrame({'j%i' % (sheet_index-1): (sh.Is)/(10*area*m)*d})
             final_array=final_array.join(dat2)
             plot_array = plot_array.join(np.abs(dat2))
 
